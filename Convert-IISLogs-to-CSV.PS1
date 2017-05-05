@@ -1,4 +1,4 @@
-$logFilepath = "C:\Users\su347719\Desktop\caslogs.txt"
+$logFilepath = "C:\Users\sunil\Desktop\caslogs.txt"
 $logfile = Get-Content $logfilepath
 
 $CsvHeader=$logfile[3].Replace("#Fields: ","")
