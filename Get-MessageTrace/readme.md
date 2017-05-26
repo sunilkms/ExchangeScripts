@@ -23,7 +23,6 @@ Get-MessageTrace -Sender Sunil.chauhan@xyz.com
 Example 4 -: By Default script will only search for last 24 hours logs, for tracking emails over 24 hours or more period use "-Days" Parameter. 
 
 Below example demonstrate searching for last 3 Day
-
 # Get-MessageTrace -Sender Sunil.chauhan@xyz.com -Recipient testuser@xyz.com -days 3
 # Get-MessageTrace -Sender Sunil.chauhan@xyz.com -days 3
 # Get-MessageTrace -Recipient Sunil.chauhan@xyz.com -days 3
