@@ -1,8 +1,8 @@
 $logFilepath = "C:\Users\sunil\Desktop\caslogs.txt"
-$logfile = Get-Content $logfilepath
+$logdata = Get-Content $logfilepath
 
-$CsvHeader=$logfile[3].Replace("#Fields: ","")
-$EWSLogs=$logfile | ? {$_ -match "Labadmin" -and $_ -match "EWS"}
+$CsvHeader=$logdata[3].Replace("#Fields: ","")
+$EWSLogs=$logdata | ? {$_ -match "Labadmin" -and $_ -match "EWS"}
 
 $FinalData=@()
 $FinalData+=$CsvHeader
@@ -14,4 +14,4 @@ foreach ($line in $FinalData){
         $Report+=$newline }
 
 $table = Convertfrom-Csv $Report -UseCulture
-$Table | Export-Csv "IIS-Logs.csv" -Notype
+$table | Group-Object -Property sc-status
