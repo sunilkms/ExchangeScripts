@@ -9,6 +9,6 @@
 
 Example:
        . check how many Mailbox will be moved when you select 200 GB
-       . GetMbxtoMovefromDB -SizeToMoveInGB 200 -sDB DB20
+       >GetMbxtoMovefromDB -SizeToMoveInGB 200 -sDB DB20
        . Place the Mailbox on Move "-BIL Default value set to 40" to make the pramiter optional
-       . GetMbxtoMovefromDB -SizeToMoveInGB 200 -sDB DB20 -TDB DB31 -MRS CAS03 -move
+       >GetMbxtoMovefromDB -SizeToMoveInGB 200 -sDB DB20 -TDB DB31 -MRS CAS03 -move
