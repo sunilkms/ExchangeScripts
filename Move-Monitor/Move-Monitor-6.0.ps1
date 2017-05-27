@@ -54,16 +54,16 @@ $Mailboxes = Get-MailboxStatistics -Database $database | where {$_.DisconnectRea
                 if ($mailboxes -eq $null)
                       {
                       Write-Host "no mailbox found in the db for cleanup"
-	      		          } 
+	      	      } 
                  else 
                      { 
-                		Write-host "Mailbox found for cleanup:"$Mailboxes.Count -f cyan
-						        Write-Host "cleaning..."
-						        $Mailboxes | % {
-				            Remove-StoreMailbox -Database $_.database -Identity $_.mailboxguid -MailboxState SoftDeleted -Confirm:$False
-										}
-						Write-Host "done."
-					 }
+                      Write-host "Mailbox found for cleanup:"$Mailboxes.Count -f cyan
+		      Write-Host "cleaning..."
+		      $Mailboxes | % {
+		      Remove-StoreMailbox -Database $_.database -Identity $_.mailboxguid -MailboxState SoftDeleted -Confirm:$False
+		        }
+		        Write-Host "done."
+		     }
 }
 
 #Function to Cleanup Completed Move Requests
