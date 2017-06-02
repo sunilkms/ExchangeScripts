@@ -26,7 +26,6 @@ $Smtp="smtpserver"
 #================================================================ 
 
 #Function to Get Database Free Space
-
 function GetDBFreeSpace {
 
 		Param ($DB)
@@ -86,7 +85,7 @@ Function CleanCompMoveRequest {
 	}
 
 DO {
-Clear-Content "movemonlog-test.txt"
+Clear-Content $MoveMonLog
 #ALL Queued Mailbox Move Request
 $queued=Get-MoveRequest -MoveStatus Queued
 #All inprogress Move Requests
@@ -124,8 +123,8 @@ Else
        Write-Host "Total DB to monitor" $dtmc -f cyan
       
       }
-	    Add-Content -Value "Mailbox Move InProgress:$($MoveRequest.Count) Queued:$($Queued.count)" -Path "movemonlog-test.txt"
-        Add-Content -Value "Total DB to monitor:$dtmc" -Path "movemonlog-test.txt"
+	    Add-Content -Value "Mailbox Move InProgress:$($MoveRequest.Count) Queued:$($Queued.count)" -Path $MoveMonLog
+        Add-Content -Value "Total DB to monitor:$dtmc" -Path $MoveMonLog
 
 if ($DataBasetoMonitor) {
 #Get the Logfiles disk space stats
@@ -142,57 +141,57 @@ foreach ($Sdb in $DataBasetoMonitor)
       
 	  ""
       Write-host "**************************************************"
-      Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
+      Add-Content -Value "**************************************************" -Path $MoveMonLog
 
       Write-Host $DB":" -f yellow -NoNewline
-      Add-Content -Value "$DB" -Path "movemonlog-test.txt"
+      Add-Content -Value "$DB" -Path $MoveMonLog
       write-host " Free Space in DB:" -n
       Write-host $(GetDBFreespace $DB)[0].'Free(%)' -f cyan -NoNewline
       Write-host "(%)"
       Write-host "CircularLoggingEnabled: " -n
       Write-host $CLstatus -f $cL
-      Add-Content -Value "Free Space in DB:$($(GetDBFreespace $DB)[0].'Free(%)') %" -Path "movemonlog-test.txt"
+      Add-Content -Value "Free Space in DB:$($(GetDBFreespace $DB)[0].'Free(%)') %" -Path $MoveMonLog
       
 	  if ($clstatus -eq 0)
             {
 	            Write-host "Enabling Circular Logging for DB" $db
                 Set-MailboxDatabase $db -CircularLoggingEnabled:$True
-                Add-Content -Value "Enabling Circular Logging for DB:$db" -Path "movemonlog-test.txt"
+                Add-Content -Value "Enabling Circular Logging for DB:$db" -Path $MoveMonLog
 	        }
 	  
       $Move = Get-MoveRequest -TargetDatabase $db -ResultSize Unlimited
-      Add-Content -Value "Total Mailbox Move to Target DB:$($move.count)" -Path "movemonlog-test.txt"
+      Add-Content -Value "Total Mailbox Move to Target DB:$($move.count)" -Path $MoveMonLog
       $comp = $move | ? {$_.Status -like "Completed"}
       $compinp = $move | ? {$_.Status -like "inprog*"}
       $failed = $move | ? {$_.Status -like "Fail*"}
       $SourceDB = $move | select SourceDatabase -Unique
       Write-host "Source Database:" $SourceDB.SourceDatabase.Name
-      Add-Content -Value "Source Database:$($SourceDB.SourceDatabase.Name)" -Path "movemonlog-test.txt"
+      Add-Content -Value "Source Database:$($SourceDB.SourceDatabase.Name)" -Path $MoveMonLog
 	  Write-host "MoveRequest Completed:" -n
       Write-Host $($Comp.count)"" -f cyan -n
-      Add-Content -Value "MoveRequest Completed:$($Comp.count)" -Path "movemonlog-test.txt"
+      Add-Content -Value "MoveRequest Completed:$($Comp.count)" -Path $MoveMonLog
 	  Write-Host "Inprogress:" -n
-      Add-Content -Value "Inprogress:$($compinp.count)" -Path "movemonlog-test.txt"
+      Add-Content -Value "Inprogress:$($compinp.count)" -Path $MoveMonLog
       
       if ($failed) { Write-Host $($compinp.count) -n -f Cyan
       
-      Add-Content -Value "Failed:$($Failed.count)" -Path "movemonlog-test.txt"
+      Add-Content -Value "Failed:$($Failed.count)" -Path $MoveMonLog
 	  Write-Host " Failed:" -n -f Cyan
       Write-Host $($Failed.count) -f yellow
       
 	  Write-Host "Resumeing Failed Moves.."
-      Add-Content -Value "Resumeing Failed Moves.." -Path "movemonlog-test.txt"
+      Add-Content -Value "Resumeing Failed Moves.." -Path $MoveMonLog
       Get-MoveRequest -targetDatabase $db -moveStatus "Failed" | Resume-MoveRequest -Confirm:$false
       } else {Write-Host $($compinp.count) -f Cyan}
  
      $Free=$(GetDBFreespace $DB)[1].'Free(%)'
 	
 	if ($free -lt $DiskTh) {
-			Add-Content -Value "Log drive space Free(%):$free" -Path "movemonlog-test.txt"
+			Add-Content -Value "Log drive space Free(%):$free" -Path $MoveMonLog
 			Write-Host "Log Drive space seems to be high for DB:$db" " Free(%):$Free" -f Yellow
 			Write-Host "Move Monitor will suspend Mailbox moves for:$db" -f Yellow
-			Add-Content -Value "Log Drive space seems to be high for DB:$db" -Path "movemonlog-test.txt"
-            Add-Content -Value "`nMove Monitor will suspend Mailbox moves for:$db" -Path "movemonlog-test.txt"			
+			Add-Content -Value "Log Drive space seems to be high for DB:$db" -Path $MoveMonLog
+            Add-Content -Value "`nMove Monitor will suspend Mailbox moves for:$db" -Path $MoveMonLog			
 			$TotMove=Get-MoveRequest -TargetDatabase $db -moveStatus Inprogress
 			Write-Host "Total Move in progress:"$($totMove.count)
 			
@@ -201,8 +200,8 @@ foreach ($Sdb in $DataBasetoMonitor)
 			$n=Get-MoveRequest -TargetDatabase $db -moveStatus Inprogress
 			$ns=
 			Write-Host "Move Suspended:"($totMove.count - $n.count)
-            Add-Content -Value "`nMove Suspended:$($totMove.count - $n.count)" -Path "movemonlog-test.txt"
-            Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
+            Add-Content -Value "`nMove Suspended:$($totMove.count - $n.count)" -Path $MoveMonLog
+            Add-Content -Value "**************************************************" -Path $MoveMonLog
 			
 			#Send Notification
 			$suspendSub="Mailbox Move Monitor: Move Suspended for:$DB"
@@ -210,9 +209,9 @@ foreach ($Sdb in $DataBasetoMonitor)
 	} else {
 			Write-host "Log drive space Free(%):" -n
 		    Write-host $Free  -f Green
-		    Add-Content -Value "Log drive space Free(%):$free" -Path "movemonlog-test.txt"
+		    Add-Content -Value "Log drive space Free(%):$free" -Path $MoveMonLog
 		    Write-host "**************************************************"
-            Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
+            Add-Content -Value "**************************************************" -Path $MoveMonLog
 		   } 
   }
  }
@@ -223,11 +222,11 @@ foreach ($Sdb in $DataBasetoMonitor)
             Write-Host "Suspended Databases:"$($sDataBasetoMonitor).TargetDatabase
             Write-Host "Checking if MoveRequest can be Resume."
             Write-Host "**************************************************"
-            Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
-            Add-Content -Value "Suspened MoveRequest Found:$($SmoveRequest.count)" -Path "movemonlog-test.txt"            
-            Add-Content -Value "Suspended Database:$($($sDataBasetoMonitor).TargetDatabase)" -Path "movemonlog-test.txt"
-            Add-Content -Value "Checking if MoveRequest can be Resume." -Path "movemonlog-test.txt"
-            Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
+            Add-Content -Value "**************************************************" -Path $MoveMonLog
+            Add-Content -Value "Suspened MoveRequest Found:$($SmoveRequest.count)" -Path $MoveMonLog            
+            Add-Content -Value "Suspended Database:$($($sDataBasetoMonitor).TargetDatabase)" -Path $MoveMonLog
+            Add-Content -Value "Checking if MoveRequest can be Resume." -Path $MoveMonLog
+            Add-Content -Value "**************************************************" -Path $MoveMonLog
             #Write-Host "Suspended Move Request:"$sDataBasetoMonitor
 	foreach ($susDB in $sDataBasetoMonitor) 
 			{                             
@@ -241,16 +240,16 @@ foreach ($Sdb in $DataBasetoMonitor)
                     $Free=$(GetDBFreespace $DB)[1].'Free(%)'                                
 				    if ($free -gt $sDiskTh) 
 				    {
-                    Add-Content -Value "$db" -Path "movemonlog-test.txt"
+                    Add-Content -Value "$db" -Path $MoveMonLog
 					Write-Host "LogDrive space seems to be normal now for DB:" -n
 					Write-Host $db -f yellow -NoNewline
 					Write-Host " Free(%):" -NoNewline
 					write-host $Free -f Yellow
 					write-host "MoveMonitor will Resume Mailbox move for DB:"$db -f Green
                     Write-Host "**************************************************"
-                    Add-Content -Value "LogDrive space seems to be normal now,LogDrive free(%):$free" -Path "movemonlog-test.txt"
-                    Add-Content -Value "`nResuming Mailbox move Requests." -Path "movemonlog-test.txt"
-                    Add-Content -Value "`nonly first 5 mailbox will be resume at a time." -Path "movemonlog-test.txt"
+                    Add-Content -Value "LogDrive space seems to be normal now,LogDrive free(%):$free" -Path $MoveMonLog
+                    Add-Content -Value "`nResuming Mailbox move Requests." -Path $MoveMonLog
+                    Add-Content -Value "`nonly first 5 mailbox will be resume at a time." -Path $MoveMonLog
                     if ($SmoveRequest.count -gt 5)
                        {
                         Get-MoveRequest -TargetDatabase $DB -moveStatus Suspended | select -First 5 | Resume-MoveRequest -Confirm:$false 
@@ -260,8 +259,8 @@ foreach ($Sdb in $DataBasetoMonitor)
                         Get-MoveRequest -TargetDatabase $DB -moveStatus Suspended | Resume-MoveRequest -Confirm:$false
                         }
 
-                    Add-Content -Value "`nMailbox Move Has been Resumed." -Path "movemonlog-test.txt"
-                    Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
+                    Add-Content -Value "`nMailbox Move Has been Resumed." -Path $MoveMonLog
+                    Add-Content -Value "**************************************************" -Path $MoveMonLog
 					$sub="MoveMoniter: Mailbox Move has been Resumed for:$DB"
                     #Send-MailMessage -to $to -From $from -Subject $sub -SmtpServer $smtp
 					}
@@ -273,10 +272,10 @@ foreach ($Sdb in $DataBasetoMonitor)
                     Write-Host $Free -ForegroundColor Cyan
                     Write-Host "**************************************************"
                     
-                    Add-Content -Value "Log Drive size still high for DB:$DB" -Path "movemonlog-test.txt"
-                    Add-Content -Value "`nMoves will be Auto Resume when Drive is 95% Free." -Path "movemonlog-test.txt"
-                    Add-Content -Value "Currently Free(%):$free" -Path "movemonlog-test.txt"
-                    Add-Content -Value "**************************************************" -Path "movemonlog-test.txt"
+                    Add-Content -Value "Log Drive size still high for DB:$DB" -Path $MoveMonLog
+                    Add-Content -Value "`nMoves will be Auto Resume when Drive is 95% Free." -Path $MoveMonLog
+                    Add-Content -Value "Currently Free(%):$free" -Path $MoveMonLog
+                    Add-Content -Value "**************************************************" -Path $MoveMonLog
 					}       
          } }
 	}
@@ -295,8 +294,8 @@ if ($ExitCode -eq "NORMAL")
 	{
         write-host "PostMove Tasks Begins.."
 		write-host "Getting SourceDatabase for Cleanup."
-        Add-Content -Value "" -Path "movemonlog-test.txt"
-        Add-Content -Value "PostMove Tasks Begens.." -Path "movemonlog-test.txt"
+        Add-Content -Value "" -Path $MoveMonLog
+        Add-Content -Value "PostMove Tasks Begens.." -Path $MoveMonLog
 		$completedmoveRequest = Get-MoveRequest -moveStatus Completed -ResultSize Unlimited
 		$SourceDataBase = $completedmoveRequest | Select SourceDatabase -Unique
         $TargetDataBase = $completedmoveRequest | Select TargetDatabase -Unique
@@ -307,13 +306,13 @@ if ($ExitCode -eq "NORMAL")
 				{
 					$db=($sdb).SourceDatabase.Name
 					write-host "Cleaning up SourceDatabase:"$db
-                    Add-Content -Value "Cleaning up SourceDatabase:$db" -Path "movemonlog-test.txt"
+                    Add-Content -Value "Cleaning up SourceDatabase:$db" -Path $MoveMonLog
 					CleanUp-Database $db
 		        }
 			}
 		else{
 		write-host "No SourceDatabase found for Cleanup."
-        Add-Content -Value "No SourceDatabase found for Cleanup." -Path "movemonlog-test.txt"
+        Add-Content -Value "No SourceDatabase found for Cleanup." -Path $MoveMonLog
  
 			}
 		
@@ -325,29 +324,31 @@ if ($ExitCode -eq "NORMAL")
                     {
                         $db=($tdb).TargetDatabase.Name
 		                write-host "Checking if Circular Logging can be disabled for DB"$db
-                        Add-Content -Value "------------------------------------------------------------------------" -Path "movemonlog-test.txt"
-                        Add-Content -Value "Checking if Circular Logging can be disabled for DB:$db" -Path "movemonlog-test.txt"
+                        Add-Content -Value "------------------------------------------------------------------------" -Path $MoveMonLog
+                        Add-Content -Value "Checking if Circular Logging can be disabled for DB:$db" -Path $MoveMonLog
                         $Free=$(GetDBFreespace $DB)[1].'Free(%)'
 		
                             if ($free -gt 80) 
 			                    {				
                                 write-host "Circular Logging has been disabled for Target DB"$db
 				                Set-MailboxDatabase $db -CircularLoggingEnabled:$false
-                                Add-Content -Value "`nCircular Logging has been disabled for Target DB:$db" -Path "movemonlog-test.txt"
-                                Add-Content -Value "------------------------------------------------------------------------" -Path "movemonlog-test.txt"
+                                Add-Content -Value "`nCircular Logging has been disabled for Target DB:$db" -Path $MoveMonLog
+                                Add-Content -Value "------------------------------------------------------------------------" -Path $MoveMonLog
 			                    } 
 			               else
 			                    { 
 		                        write-host "LogDrive Space is still less then 80% Circular Logging will be kept Enabled For the moment"-f yellow	
-                                Add-Content -Value "`nLogDrive Space is still less then 80%" -Path "movemonlog-test.txt"
-                                Add-Content -Value "Circular Logging will be kept Enabled For the moment" -Path "movemonlog-test.txt"				
+                                Add-Content -Value "`nLogDrive Space is still less then 80%" -Path $MoveMonLog
+                                Add-Content -Value "Circular Logging will be kept Enabled For the moment" -Path $MoveMonLog				
 			                    }
                     } 
-            }	
+            }
+
+	
        write-host "Removing Completed Move Request."
-       Add-Content -Value "`nRemoved Completed Move Request" -Path "movemonlog-test.txt"
+       Add-Content -Value "`nRemoved Completed Move Request" -Path $MoveMonLog
        CleanCompMoveRequest
        $suspendSub="Mailbox Move Monitor-Post Move Completion Tasks Status"
-	   Send-MailMessage -to $to -From $From -Subject $suspendSub -SmtpServer $smtp -Body (cat "movemonlog-test.txt"| Out-String)
+	   Send-MailMessage -to $to -From $From -Subject $suspendSub -SmtpServer $smtp -Body (cat $MoveMonLog| Out-String)
 
     }
