@@ -23,134 +23,126 @@ $ExitCode="FORCE"
 $to="Sunil.chauhan@xyz.com","nerajendra-c@xyz.com"
 $From="Sunil.chauhan@xyz.com"
 $Smtp="smtpserver"
+$MoveMonLog="MoveMonitorLogs.txt"
 #================================================================ 
 
 #Function to Get Database Free Space
-function GetDBFreeSpace {
-
-		Param ($DB)
+function GetDBFreeSpace 
+   {
+	Param ($DB)
 		
-		$dbinfo = get-mailboxdatabase $DB
-		$server = $dbinfo.server
-		$EDB=$dbinfo.edbfilepath.pathname.split("\")[2]
-		$log=$dbinfo.logfolderpath.pathname.split("\")[2]
-		$DBDRiveS=Get-WmiObject -ComputerName $server -Class win32_volume | Select Capacity,FreeSpace,Label
-		$DBD=@()
+	$dbinfo = get-mailboxdatabase $DB
+	$server = $dbinfo.server
+	$EDB=$dbinfo.edbfilepath.pathname.split("\")[2]
+	$log=$dbinfo.logfolderpath.pathname.split("\")[2]
+	$DBDRiveS=Get-WmiObject -ComputerName $server -Class win32_volume | Select Capacity,FreeSpace,Label
+	$DBD=@()
+	$edbs=$DBDRiveS | ? {$_.Label -eq $edb } | Select Label, @{n="Capacity GB";E={[math]::round($_.Capacity / 1073741824)}},
+	@{n="FreeSpace GB";E={[math]::round($_.FreeSpace / 1073741824)}}, @{Name="Free(%)" `
+	;expression={[math]::round(((($_.FreeSpace / 1073741824)/($_.Capacity / 1073741824)) * 100),0)}}
+	$dbd += $edbs
 
-$edbs=$DBDRiveS | ? {$_.Label -eq $edb } | Select Label, @{n="Capacity GB";E={[math]::round($_.Capacity / 1073741824)}},
- 
-@{n="FreeSpace GB";E={[math]::round($_.FreeSpace / 1073741824)}}, @{Name="Free(%)" `
-;expression={[math]::round(((($_.FreeSpace / 1073741824)/($_.Capacity / 1073741824)) * 100),0)}}
+	$log=$DBDRiveS | ? {$_.Label -eq $log } | Select Label, @{n="Capacity GB";E={[math]::round($_.Capacity / 1073741824)}}, 
+	@{n="FreeSpace GB";E={[math]::round($_.FreeSpace / 1073741824)}}, @{Name="Free(%)"; `
+	expression={[math]::round(((($_.FreeSpace / 1073741824)/($_.Capacity / 1073741824)) * 100),0)}}
+	$dbd += $log
+	$dbd
+  }
 
-$dbd += $edbs
-
-$log=$DBDRiveS | ? {$_.Label -eq $log } | Select Label, @{n="Capacity GB";E={[math]::round($_.Capacity / 1073741824)}}, 
-@{n="FreeSpace GB";E={[math]::round($_.FreeSpace / 1073741824)}}, @{Name="Free(%)"; `
-expression={[math]::round(((($_.FreeSpace / 1073741824)/($_.Capacity / 1073741824)) * 100),0)}}
-
-$dbd += $log
-$dbd
-}
-
-function CleanUp-Database {
-
-param ($database)
-
-$Mailboxes = Get-MailboxStatistics -Database $database | where {$_.DisconnectReason -eq “SoftDeleted”}
-
-if ($mailboxes -eq $null)
-                      {
-                      Write-Host "no mailbox found in the db for cleanup"
-	      		      } 
-                 else 
-                     { 
-                		Write-host "Mailbox found for cleanup:"$Mailboxes.Count -f cyan
-						Write-Host "cleaning..."
-						$Mailboxes | % {
-				        Remove-StoreMailbox -Database $_.database -Identity $_.mailboxguid -MailboxState SoftDeleted -Confirm:$False
-										}
-						Write-Host "done."
-					 }
-}
+function CleanUp-Database 
+  {
+	param ($database)
+	$Mailboxes = Get-MailboxStatistics -Database $database | where {$_.DisconnectReason -eq “SoftDeleted”}
+	if ($mailboxes -eq $null)
+           {
+            	Write-Host "no mailbox found in the db for cleanup"
+	   } 
+        else 
+          { 
+        	Write-host "Mailbox found for cleanup:"$Mailboxes.Count -f cyan
+		Write-Host "cleaning..."
+		$Mailboxes | % {Remove-StoreMailbox -Database $_.database -Identity $_.mailboxguid -MailboxState SoftDeleted -Confirm:$False}
+		Write-Host "done."
+	  }
+  }
 
 
-Function CleanCompMoveRequest {
-		write-host "Getting Completed Mailbox Move Request"
-		$completed = Get-MoveRequest -MoveStatus Completed -ResultSize Unlimited
-
-        if ($completed) {
+Function CleanCompMoveRequest 
+  {
+	write-host "Getting Completed Mailbox Move Request"
+	$completed = Get-MoveRequest -MoveStatus Completed -ResultSize Unlimited
+        if ($completed) 
+		{
 		write-host "Found Completed move Request to remove:" $completed.count
 		$completed | Remove-MoveRequest -Confirm:$false
 		write-host "DOne" } else {"ALL clear, No completed Move Request found."}
-	}
+		}
 
+#Monitor Loop Start here		
 DO {
-Clear-Content $MoveMonLog
-#ALL Queued Mailbox Move Request
-$queued=Get-MoveRequest -MoveStatus Queued
-#All inprogress Move Requests
-$MoveRequest=Get-MoveRequest -moveStatus Inprogress -ResultSize Unlimited #| ? {$_.TargetDatabase -notlike "*DU*"}
-#All Suspend Move Requests
-$SmoveRequest=Get-MoveRequest -moveStatus Suspended
-#Get unique DB for Monitor 
-$DataBasetoMonitor=$moveRequest | Select TargetDatabase -Unique
-$SdatabaseToMonitor=$smoveRequest | Select TargetDatabase -Unique
-
-if ($DataBasetoMonitor -eq $null -and $SdatabaseToMonitor -eq $null) 
-   {
-    $ExitCode="NORMAL"
-    "No Mailbox move in progress, Monitor will terminate.." 
-    Break
-   } 
-Else
-   {
-   	Write-Host "
-    Mailbox Move InProgress:" -n
-	Write-host "" $MoveRequest.Count -f cyan -n
-	Write-host " Queued:" -n
-	
-	#Display Suspend Move info only if there are Suspend Moves
-    if ($sDataBasetoMonitor)
-	   {
+	Clear-Content $MoveMonLog
+	#ALL Queued Mailbox Move Request
+	$queued=Get-MoveRequest -MoveStatus Queued
+	#All inprogress Move Requests
+	$MoveRequest=Get-MoveRequest -moveStatus Inprogress -ResultSize Unlimited
+	#All Suspend Move Requests
+	$SmoveRequest=Get-MoveRequest -moveStatus Suspended
+	#Get unique DB for Monitor 
+	$DataBasetoMonitor=$moveRequest | Select TargetDatabase -Unique
+	$SdatabaseToMonitor=$smoveRequest | Select TargetDatabase -Unique
+	if ($DataBasetoMonitor -eq $null -and $SdatabaseToMonitor -eq $null) 
+   	{
+    		$ExitCode="NORMAL"
+    		"No Mailbox move in progress, Monitor will terminate.." 
+    		Break
+	} 
+	Else
+   	{
+   		Write-Host "
+    		Mailbox Move InProgress:" -n
+		Write-host "" $MoveRequest.Count -f cyan -n
+		Write-host " Queued:" -n	
+		#Display Suspend Move info only if there are Suspend Moves
+    	if ($sDataBasetoMonitor)
+	{
 		Write-Host "" $Queued.count -f Yellow -NoNewline
 		Write-host " Suspended:" -n
 		Write-host ""$SmoveRequest.count -ForegroundColor Yellow
-	   }
+	}
 	else 
-	   {Write-Host "" $Queued.count -f Yellow}
-       
-       if ($DataBasetoMonitor.count -gt 1) { $dtmc = $DataBasetoMonitor.count} else {$dtmc=1}
-       Write-Host "Total DB to monitor" $dtmc -f cyan
-      
-      }
-	    Add-Content -Value "Mailbox Move InProgress:$($MoveRequest.Count) Queued:$($Queued.count)" -Path $MoveMonLog
+	{Write-Host "" $Queued.count -f Yellow}       
+        if ($DataBasetoMonitor.count -gt 1) { $dtmc = $DataBasetoMonitor.count} else {$dtmc=1}
+        Write-Host "Total DB to monitor" $dtmc -f cyan      
+        }
+	
+	Add-Content -Value "Mailbox Move InProgress:$($MoveRequest.Count) Queued:$($Queued.count)" -Path $MoveMonLog
         Add-Content -Value "Total DB to monitor:$dtmc" -Path $MoveMonLog
 
 if ($DataBasetoMonitor) {
-#Get the Logfiles disk space stats
-foreach ($Sdb in $DataBasetoMonitor)
-     {      
-      $db=($Sdb).TargetDatabase.Name
-      $ldn=$(Get-MailboxDatabase $db).Logfolderpath.PathName.split("\")[2]
+	#Get the Logfiles disk space stats
+	foreach ($Sdb in $DataBasetoMonitor)
+     	{      
+      	$db=($Sdb).TargetDatabase.Name
+      	$ldn=$(Get-MailboxDatabase $db).Logfolderpath.PathName.split("\")[2]
       
-	  #Circular Logging Status of Database
-	  $CLstatus = (Get-MailboxDatabase $db).CircularLoggingEnabled
-      $CLvalueG = "Green" 
-      $CLvalueR = "REd"
-      $CL = if ($clstatus -eq "true") { $CLvalueG } else {$CLvalueR}
+	#Circular Logging Status of Database
+	CLstatus = (Get-MailboxDatabase $db).CircularLoggingEnabled
+      	$CLvalueG = "Green" 
+      	$CLvalueR = "REd"
+      	$CL = if ($clstatus -eq "true") { $CLvalueG } else {$CLvalueR}
       
 	  ""
-      Write-host "**************************************************"
-      Add-Content -Value "**************************************************" -Path $MoveMonLog
+      	Write-host "**************************************************"
+      	Add-Content -Value "**************************************************" -Path $MoveMonLog
 
-      Write-Host $DB":" -f yellow -NoNewline
-      Add-Content -Value "$DB" -Path $MoveMonLog
-      write-host " Free Space in DB:" -n
-      Write-host $(GetDBFreespace $DB)[0].'Free(%)' -f cyan -NoNewline
-      Write-host "(%)"
-      Write-host "CircularLoggingEnabled: " -n
-      Write-host $CLstatus -f $cL
-      Add-Content -Value "Free Space in DB:$($(GetDBFreespace $DB)[0].'Free(%)') %" -Path $MoveMonLog
+      	Write-Host $DB":" -f yellow -NoNewline
+      	Add-Content -Value "$DB" -Path $MoveMonLog
+      	write-host " Free Space in DB:" -n
+      	Write-host $(GetDBFreespace $DB)[0].'Free(%)' -f cyan -NoNewline
+      	Write-host "(%)"
+      	Write-host "CircularLoggingEnabled: " -n
+      	Write-host $CLstatus -f $cL
+      	Add-Content -Value "Free Space in DB:$($(GetDBFreespace $DB)[0].'Free(%)') %" -Path $MoveMonLog
       
 	  if ($clstatus -eq 0)
             {
