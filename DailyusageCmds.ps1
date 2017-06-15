@@ -11,3 +11,9 @@ $l = 97..122| % {[char]$_}
 $c = 65..90 | % {[char]$_}
 
 $password = -join (($l + $c | Get-Random -Count 6) + ( $s | Get-Random -Count 1 ) + ($n | Get-Random -Count 1))
+
+Move All Mounted Database to a Specific host.
+
+Get-MailboxDatabaseCopyStatus -Server DAG03 | ? {$_.Status -eq "Mounted"} | % {
+Move-ActiveMailboxDatabase -ActivateOnServer DAG04 -Confirm:$false -Identity $_.DatabaseName }
+
