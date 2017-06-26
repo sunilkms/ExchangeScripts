@@ -17,3 +17,7 @@ Move All Mounted Database to a Specific host.
 Get-MailboxDatabaseCopyStatus -Server DAG03 | ? {$_.Status -eq "Mounted"} | % {
 Move-ActiveMailboxDatabase -ActivateOnServer DAG04 -Confirm:$false -Identity $_.DatabaseName }
 
+#Get Role Group Member.
+
+Get-RoleGroup | ? {$_.RoleAssignments -match "Export"} | %{Get-RoleGroupMember -Identity $_.Name}
+
