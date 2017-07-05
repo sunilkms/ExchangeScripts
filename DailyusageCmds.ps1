@@ -21,3 +21,7 @@ Move-ActiveMailboxDatabase -ActivateOnServer DAG04 -Confirm:$false -Identity $_.
 
 Get-RoleGroup | ? {$_.RoleAssignments -match "Export"} | %{Get-RoleGroupMember -Identity $_.Name}
 
+#Get Full Mailbox Access Report filter unwated objects.
+
+Get-MailboxPermission SOC | ? {$_.IsInherited -ne "True" -or $_.user -notlike "*NT*"}
+
