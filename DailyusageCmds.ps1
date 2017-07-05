@@ -25,3 +25,6 @@ Get-RoleGroup | ? {$_.RoleAssignments -match "Export"} | %{Get-RoleGroupMember -
 
 Get-MailboxPermission SOC | ? {$_.IsInherited -ne "True" -or $_.user -notlike "*NT*"}
 
+#get Mail queue
+Get-TransportServer | Get-Queue | ? {$_.MessageCount -gt 10}
+
