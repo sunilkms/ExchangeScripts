@@ -1,0 +1,16 @@
+#Get-Delegates Reports
+
+Param (
+
+$inputFile = "C:\Users\user\Desktop\users.txt"
+
+)
+
+$users = gc $inputFile
+$mbx = $users | get-user | ? {$_.RecipientType -notlike "*USER"}
+$CP = $Mbx | Get-CalendarProcessing
+$fcp = $cp | ? {$_.ResourceDelegates -ne $null}
+$data = $fcp | select @{N="Mailbox";E={(get-user $_.Identity).UserPrincipalName}},@{N="Delegates";`
+E={$_.ResourceDelegates.ObjectGuid | % { ((get-user $_.Guid).USerprincipalName) -join ";"}}}
+
+$data | Export-csv "Delegates-Report.csv" -NoTypeInformation
