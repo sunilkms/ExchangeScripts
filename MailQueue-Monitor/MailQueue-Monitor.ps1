@@ -27,5 +27,5 @@ $from="messaging-team@xyz.com"
 $subject="Highest Mail Queue count - $Max"
 
 if ($max -gt 10) {
-Send-MailMessage -From $from -To $to -Subject $subject -Smtpserver "SW20HUB04.corp.shire.com" -body $body -BodyAsHtml 
+Send-MailMessage -From $from -To $to -Subject $subject -Smtpserver "SW20" -body $body -BodyAsHtml 
 }
