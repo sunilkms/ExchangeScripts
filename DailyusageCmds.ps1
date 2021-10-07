@@ -1,3 +1,6 @@
+#check all TLS versions and their status.
+
+Get-ChildItem -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols" | % {Get-ChildItem $_.pspath}
 
 #Check Server Helth on a Remote Host
 Test-ServiceHealth -Server LABHUB01
