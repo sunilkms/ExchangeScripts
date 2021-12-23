@@ -1,3 +1,6 @@
+#Fetch task running under a specific account on multiple servers.
+$("Server1","server2") | % {schtasks.exe /query /s $_ /V /FO CSV | ConvertFrom-Csv |  ? {$_.'<changeme | Svc ac>" } | select HostName,TaskName,Author,"Run As User"}
+
 #check all TLS versions and their status.
 
 Get-ChildItem -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols" | % {Get-ChildItem $_.pspath}
